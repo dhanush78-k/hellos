@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 150;
+      allow update: if isOwner(userId)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']));
+      allow delete: if isOwner(userId);
+
+      // Health Events
+      match /healthEvents/{eventId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(eventId)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.title is string && request.resource.data.title.size() <= 150
+          && request.resource.data.date is string && request.resource.data.date.size() <= 50;
+        allow update: if isOwner(userId)
+          && isValidId(eventId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(eventId);
+      }
+
+      // Health Documents
+      match /documents/{documentId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(documentId)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.name is string && request.resource.data.name.size() <= 200;
+        allow update: if isOwner(userId)
+          && isValidId(documentId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(documentId);
+      }
+
+      // Medications
+      match /medications/{medicationId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(medicationId)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.name is string && request.resource.data.name.size() <= 150;
+        allow update: if isOwner(userId)
+          && isValidId(medicationId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(medicationId);
+      }
+
+      // Appointments
+      match /appointments/{appointmentId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(appointmentId)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.doctorName is string && request.resource.data.doctorName.size() <= 150
+          && request.resource.data.date is string && request.resource.data.date.size() <= 50;
+        allow update: if isOwner(userId)
+          && isValidId(appointmentId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(appointmentId);
+      }
+
+      // Goals
+      match /goals/{goalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(goalId)
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.title is string && request.resource.data.title.size() <= 150;
+        allow update: if isOwner(userId)
+          && isValidId(goalId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+
+      // Vital Signs
+      match /vitals/{vitalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(vitalId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(vitalId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(vitalId);
+      }
+
+      // Symptoms
+      match /symptoms/{symptomId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(symptomId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(symptomId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(symptomId);
+      }
+
+      // Medical History
+      match /medicalHistory/{historyId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(historyId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(historyId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(historyId);
+      }
+
+      // Lifestyle Tracker
+      match /lifestyle/{logId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(logId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(logId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(logId);
+      }
+
+      // AI Conversations & Messages
+      match /aiConversations/{conversationId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(conversationId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(conversationId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(conversationId);
+
+        match /messages/{messageId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId)
+            && isValidId(messageId)
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.role is string
+            && request.resource.data.content is string;
+          allow update, delete: if isOwner(userId) && isValidId(messageId);
+        }
+      }
+
+      // Health Signals
+      match /healthSignals/{signalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(signalId)
+          && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(userId)
+          && isValidId(signalId)
+          && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(signalId);
+      }
+    }
+
+    // Temporary Doctor Health Shares (Public read if valid share ID, owned create/update/delete)
+    match /healthShares/{shareId} {
+      allow get: if true;
+      allow create: if isSignedIn()
+        && isValidId(shareId)
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && isValidId(shareId)
+        && resource.data.userId == request.auth.uid;
+    }
+  }
+}
